@@ -1,14 +1,23 @@
 ---
 import Base from '../layouts/Base.astro';
-import { avatarSvg, catForSeed, DISC_COLORS, traitsForSeed } from '../lib/pixel-cat/index.ts';
-import { resolveState } from '../lib/share-state.ts';
+import { avatarSvg, catForSeed, DISC_COLORS, seedForName, spriteSvg, traitsForSeed } from '../lib/pixel-cat/index.ts';
+import { catTile, howItWorks, svgDataUrl } from '../lib/page.ts';
 
-// The default cat is drawn into the HTML, so the page shows a cat before (or without) its script.
-const { seed, discIndex } = resolveState(null);
+// Everything a reader or crawler needs is drawn into the HTML: the default cat, its facts and the five steps
+// from its name, and a first gallery. The script then takes over the same markup.
+const steps = howItWorks(null);
+const seed = BigInt(steps.seed);
 const traits = traitsForSeed(seed);
-const disc = DISC_COLORS[discIndex];
-const svg = avatarSvg(catForSeed(seed), disc.hex, { attrs: { role: 'img', 'aria-label': traits.line } });
+const disc = steps.disc;
+const cat = catForSeed(seed);
+const svg = avatarSvg(cat, disc.hex, { attrs: { role: 'img', 'aria-label': traits.line } });
+const decorative = { attrs: { 'aria-hidden': 'true' } };
 
+/** Enough tiles for 5 rows of 10, the widest gallery; the script redraws it for the reader's width. */
+const GALLERY_TILES = 50;
+const tiles = Array.from({ length: GALLERY_TILES }, (_, i) => catTile(seedForName(`gallery ${i + 1}`)));
+
+const twoCatsUrl = 'https://twocats.sbarro.dev/';
 const title = 'pixel cat: turn any name into a pixel cat';
 const description =
   'Type a name to meet its pixel cat, drawn by the same generator as two cats, the iPhone app for splitting expenses. Free PNG and SVG downloads.';
@@ -18,7 +27,7 @@ const repo = 'https://github.com/lsbarro/pixel-cat';
 const twoCats = {
   '@type': 'MobileApplication',
   name: 'two cats',
-  url: 'https://twocats.sbarro.dev/',
+  url: twoCatsUrl,
   operatingSystem: 'iOS',
   applicationCategory: 'FinanceApplication',
 };
@@ -56,140 +65,242 @@ const jsonLd = [
 ---
 
 <Base title={title} description={description} jsonLd={jsonLd}>
-  <h1>pixel cat</h1>
-  <p class="lede">Type a name to meet its cat. The same name always gives the same cat.</p>
-
-  <section class="generator card" id="generator" aria-label="Cat generator">
-    <div class="stage" id="stage" data-view="avatar">
-      <div class="cat" id="cat"><Fragment set:html={svg} /></div>
+  <header class="site-header">
+    <div class="band">
+      <h1 class="wordmark"><img src="/favicon.svg" alt="" width="26" height="26" />pixel cat</h1>
+      <nav class="site-nav" aria-label="Sections">
+        <a href="#how">How it works</a>
+        <a href="#cats">Cats</a>
+        <a class="pill" href={twoCatsUrl}>two cats ↗</a>
+      </nav>
     </div>
+  </header>
 
-    <div class="controls">
-      <div>
-        <label class="field-label" for="name">Name</label>
-        <div class="row">
-          <input id="name" type="text" placeholder="pixel cat" autocomplete="off" autocapitalize="words" spellcheck="false" />
-          <button id="random" type="button" class="primary">Random</button>
+  <main>
+    <section class="hero" aria-label="Cat generator">
+      <div class="band hero-inner">
+        <div class="hero-controls">
+          <div>
+            <label class="name-label" for="name">Type a name to meet its cat.</label>
+            <input
+              id="name"
+              class="name-input"
+              type="text"
+              placeholder="pixel cat"
+              autocomplete="off"
+              autocapitalize="words"
+              spellcheck="false"
+            />
+            <p class="tagline">The same name always gives the same cat.</p>
+          </div>
+
+          <div class="actions">
+            <button id="random" type="button" class="button-light">Random</button>
+            <fieldset class="segmented">
+              <legend class="visually-hidden">Show</legend>
+              <label><input type="radio" name="view" value="avatar" checked />On its disc</label>
+              <label><input type="radio" name="view" value="sprite" />Sprite</label>
+            </fieldset>
+          </div>
+
+          <dl class="facts">
+            <div class="wide"><dt>Seed</dt><dd class="mono" id="seed">{steps.seed}</dd></div>
+            <div><dt>Traits</dt><dd id="traits">{traits.line}</dd></div>
+            <div>
+              <dt>Disc</dt>
+              <dd class="disc-value">
+                <span class="swatch" id="swatch" style={`--swatch: ${disc.hex}`}></span><span id="disc">{disc.name}</span>
+              </dd>
+            </div>
+          </dl>
+
+          <div class="actions">
+            <span class="download-label">Download</span>
+            <fieldset class="segmented small">
+              <legend class="visually-hidden">Size</legend>
+              <label><input type="radio" name="size" value="256" />256 px</label>
+              <label><input type="radio" name="size" value="512" />512 px</label>
+              <label><input type="radio" name="size" value="1024" checked />1024 px</label>
+            </fieldset>
+            <button id="download-png" type="button" class="button-outline" aria-label="Download PNG">PNG</button>
+            <button id="download-svg" type="button" class="button-outline" aria-label="Download SVG">SVG</button>
+            <button id="copy" type="button" class="button-outline">Copy link</button>
+            <span class="status" id="copy-status" role="status"></span>
+          </div>
+        </div>
+
+        <div class="stage-wrap">
+          <div class="stage" id="stage" data-view="avatar" style={`--disc: ${disc.hex}`}>
+            <div class="cat" id="cat"><Fragment set:html={svg} /></div>
+          </div>
         </div>
       </div>
+    </section>
 
-      <fieldset class="segmented">
-        <legend>Show</legend>
-        <div class="options">
-          <label><input type="radio" name="view" value="avatar" checked />On its disc</label>
-          <label><input type="radio" name="view" value="sprite" />Sprite</label>
+    <section class="how" id="how" aria-labelledby="how-title">
+      <h2 class="display-heading" id="how-title">From <span id="how-subject">{steps.subject}</span> to a cat</h2>
+      <ol class="steps">
+        <li class="step">
+          <span class="step-number">1</span>
+          <h3 id="step1-title">{steps.step1Title}</h3>
+          <code class="chip" id="step1-value">{steps.step1Value}</code>
+          <p id="step1-body">{steps.step1Body}</p>
+        </li>
+        <li class="step">
+          <span class="step-number">2</span>
+          <h3>A 64-bit seed</h3>
+          <code class="chip"><span id="step2-seed">{steps.seed}</span><br /><span class="muted" id="step2-hex">{steps.seedHex}</span></code>
+          <p id="step2-body">{steps.step2Body}</p>
+        </li>
+        <li class="step">
+          <span class="step-number">3</span>
+          <h3>SplitMix64 draws</h3>
+          <dl class="chip draws" id="draws">
+            {steps.draws.map((draw) => <div><dt>{draw.key}</dt><dd>{draw.value}</dd></div>)}
+          </dl>
+          <p>Each choice is the next draw from the stream, in a fixed order.</p>
+        </li>
+        <li class="step">
+          <span class="step-number">4</span>
+          <h3>One of six discs</h3>
+          <div class="chip discs" id="discs" aria-hidden="true">
+            {
+              DISC_COLORS.map((color, i) => (
+                <span title={color.name} style={`--swatch: ${color.hex}`} data-chosen={i === steps.discIndex ? '' : undefined} />
+              ))
+            }
+          </div>
+          <p id="step4-body">{steps.step4Body}</p>
+        </li>
+        <li class="step step-cat">
+          <span class="step-number">5</span>
+          <h3>The cat</h3>
+          <div class="cat-pair">
+            <div class="cat" id="step-sprite"><Fragment set:html={spriteSvg(cat, decorative)} /></div>
+            <span aria-hidden="true">+</span>
+            <div class="cat" id="step-avatar"><Fragment set:html={avatarSvg(cat, disc.hex, decorative)} /></div>
+          </div>
+          <p>A white sprite with see-through pixels. Holes show the disc behind it.</p>
+        </li>
+      </ol>
+
+      <details class="long-version">
+        <summary>The long version<span class="toggle" aria-hidden="true">+</span></summary>
+        <div class="long-version-body">
+          <p>
+            The name is trimmed of spaces at either end, and its UTF-8 bytes are hashed with FNV-1a 64 into a 64-bit
+            seed. Case counts: Milo and milo are different cats. The seed starts a SplitMix64 random stream, and every
+            choice the cat makes is the next draw from it, in a fixed order, so a name always gives the same cat.
+          </p>
+          <p>
+            The first draw picks one of three styles. A flat cat's head grows from one of five mirrored templates,
+            named for their ears: pointy, round, classic, lynx or fold. A tilted cat is a flat head scaled up and
+            turned between 8 and 14 degrees. A sculpted cat is a small 3D head, turned and lit, then sampled onto a
+            14 × 14 pixel grid.
+          </p>
+          <p>
+            Flat and tilted cats then draw a coat: plain, calico, tabby, Siamese, dark or tuxedo. Calico and tuxedo
+            patches and tabby markings grow with cellular automata, Siamese cats get toned ears and muzzle, and a dark
+            cat is toned all over. Sculpted cats are plain, calico or Siamese. Eyes come in seven kinds: dot, tall,
+            wide, sleepy, slant, happy and wink.
+          </p>
+          <p>
+            A cat is a white sprite with see-through pixels. Holes show the disc behind it, and the in-between tones
+            pick up its colour. The disc is one of six colours (forest, sage, slate, plum, terracotta or amber), taken
+            from a second hash of the name. A random cat has no name, so its seed picks the disc.
+          </p>
         </div>
-      </fieldset>
+      </details>
+    </section>
 
-      <dl class="facts">
-        <div><dt>Seed</dt><dd class="mono" id="seed">{seed.toString()}</dd></div>
-        <div><dt>Traits</dt><dd id="traits">{traits.line}</dd></div>
+    <section class="two-cats" aria-labelledby="two-cats-title">
+      <div class="two-cats-card">
+        <img class="app-icon" src="/app-icon.png" alt="two cats app icon" width="88" height="88" />
+        <div class="two-cats-copy">
+          <h2 class="display-heading" id="two-cats-title">The cats from two cats</h2>
+          <p>
+            In <a href={twoCatsUrl}>two cats, an iPhone app for splitting expenses</a>, every person you split with
+            gets a pixel cat generated from their name. This page runs the same generator, so a name gives the same
+            cat here as it does in the app. Try your friends' names, then meet their cats in{' '}
+            <a href={twoCatsUrl}>two cats</a>.
+          </p>
+        </div>
+        <a class="button-light" href={twoCatsUrl}>Meet two cats</a>
+      </div>
+    </section>
+
+    <section class="cats" id="cats" aria-labelledby="cats-title">
+      <div class="band cats-head" id="cats-head">
         <div>
-          <dt>Disc</dt>
-          <dd><span class="swatch" id="swatch" style={`--swatch: ${disc.hex}`}></span><span id="disc">{disc.name}</span></dd>
+          <h2 class="display-heading" id="cats-title" tabindex="-1">More cats</h2>
+          <p class="cats-sub">Random cats. Pick one to open it in the generator.</p>
         </div>
-      </dl>
-
-      <div>
-        <label class="field-label" for="size">Download what is shown</label>
-        <div class="row">
-          <select id="size">
-            <option value="256">256 px</option>
-            <option value="512">512 px</option>
-            <option value="1024" selected>1024 px</option>
-          </select>
-          <button id="download-png" type="button">PNG</button>
-          <button id="download-svg" type="button">SVG</button>
+        <p class="site-links">
+          The cats from <a href={twoCatsUrl}>two cats, the iPhone app for splitting expenses</a>{' · '}
+          <a href={repo}>Source on GitHub</a>{' · '}
+          <a href={`${repo}/blob/main/LICENSE`}>MIT licence</a>
+        </p>
+      </div>
+      <div class="band gallery-wrap">
+        <div class="tile-grid" id="gallery">
+          {
+            tiles.map((tile) => (
+              <a class="tile" href={`?seed=${tile.seed}`} data-seed={tile.seed.toString()} title={tile.label} style={`--disc: ${tile.discHex}`}>
+                <img src={tile.spriteUrl} alt={tile.label} width="64" height="64" />
+              </a>
+            ))
+          }
         </div>
       </div>
+    </section>
+  </main>
 
-      <div class="row">
-        <button id="copy" type="button">Copy link</button>
-        <span class="status" id="copy-status" role="status"></span>
+  <!-- Past the gallery the page becomes an endless wall of cats. Script only, so hidden until it opens. -->
+  <div class="wall" id="wall" aria-hidden="true" inert>
+    <div class="wall-scroll" id="wall-scroll">
+      <div id="wall-spacer"></div>
+      <div class="tile-grid" id="wall-grid"></div>
+      <div class="wall-end"></div>
+    </div>
+    <div class="wall-chrome" id="wall-chrome">
+      <div class="wall-fade-top"></div>
+      <div class="wall-bar">
+        <button type="button" class="wall-back" id="wall-back">↑ Back to pixel cat</button>
+        <span class="wall-count" id="wall-count"></span>
+      </div>
+      <div class="wall-fade-bottom"></div>
+      <div class="dock">
+        <img id="dock-img" src={svgDataUrl(avatarSvg(cat, disc.hex, { xmlns: true }))} alt="" width="52" height="52" />
+        <div class="dock-text">
+          <div class="dock-title" id="dock-title">Endless cats</div>
+          <div class="dock-sub" id="dock-sub">Pick a cat to open it in the generator</div>
+        </div>
       </div>
     </div>
-  </section>
-
-  <section class="gallery" id="gallery-section" aria-labelledby="gallery-heading" hidden>
-    <h2 id="gallery-heading">More cats</h2>
-    <p>Random cats. Pick one to open it in the generator.</p>
-    <div class="gallery-grid" id="gallery"></div>
-    <button id="more" type="button">More cats</button>
-  </section>
-
-  <section class="prose" aria-labelledby="two-cats-heading">
-    <h2 id="two-cats-heading">The cats from two cats</h2>
-    <p>
-      In <a href="https://twocats.sbarro.dev/">two cats, an iPhone app for splitting expenses</a>, every person
-      you split with gets a pixel cat generated from their name. This page runs the same generator, so a name
-      gives the same cat here as it does in the app. Try your friends' names, then meet their cats in
-      <a href="https://twocats.sbarro.dev/">two cats</a>.
-    </p>
-  </section>
-
-  <section class="prose" aria-labelledby="how-heading">
-    <h2 id="how-heading">How it works</h2>
-    <p>
-      The name is trimmed of spaces at either end, and its UTF-8 bytes are hashed with FNV-1a 64 into a 64-bit
-      seed. Case counts: Milo and milo are different cats. The seed starts a SplitMix64 random stream, and every
-      choice the cat makes is the next draw from it, in a fixed order, so a name always gives the same cat.
-    </p>
-    <p>
-      The first draw picks one of three styles. A flat cat's head grows from one of five mirrored templates, named
-      for their ears: pointy, round, classic, lynx or fold. A tilted cat is a flat head scaled up and turned
-      between 8 and 14 degrees. A sculpted cat is a small 3D head, turned and lit, then sampled onto a 14 × 14
-      pixel grid.
-    </p>
-    <p>
-      Flat and tilted cats then draw a coat: plain, calico, tabby, Siamese, dark or tuxedo. Calico and tuxedo
-      patches and tabby markings grow with cellular automata, Siamese cats get toned ears and muzzle, and a dark
-      cat is toned all over. Sculpted cats are plain, calico or Siamese. Eyes come in seven kinds: dot, tall,
-      wide, sleepy, slant, happy and wink.
-    </p>
-    <p>
-      A cat is a white sprite with see-through pixels. Holes show the disc behind it, and the in-between tones
-      pick up its colour. The disc is one of six colours (forest, sage, slate, plum, terracotta or amber), taken
-      from a second hash of the name. A random cat has no name, so its seed picks the disc.
-    </p>
-  </section>
+  </div>
 
   <script>
-    import {
-      avatarSvg,
-      catForSeed,
-      DISC_COLORS,
-      discIndexForSeed,
-      spriteSvg,
-      traitsForSeed,
-      type PixelCat,
-    } from '../lib/pixel-cat/index.ts';
+    import { avatarSvg, catForSeed, spriteSvg, traitsForSeed, type PixelCat } from '../lib/pixel-cat/index.ts';
+    import { howItWorks, svgDataUrl } from '../lib/page.ts';
     import { avatarLayout, spriteLayout, spriteRgba } from '../lib/raster.ts';
     import { DEFAULT_NAME, fileStem, parseState, resolveState, serializeState, type CatState } from '../lib/share-state.ts';
+    import { initCats } from '../scripts/cats.ts';
 
     type View = 'avatar' | 'sprite';
-
-    const GALLERY_COUNT = 24;
-    /** Gallery cats are generated in batches of about this many ms per frame, so a slow phone keeps scrolling. */
-    const FRAME_BUDGET_MS = 8;
 
     const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
     const nameInput = $<HTMLInputElement>('name');
     const stage = $('stage');
     const catBox = $('cat');
-    const seedText = $('seed');
-    const traitsText = $('traits');
-    const discText = $('disc');
-    const swatch = $('swatch');
-    const sizeSelect = $<HTMLSelectElement>('size');
     const copyStatus = $('copy-status');
-    const gallery = $('gallery');
-    const moreButton = $<HTMLButtonElement>('more');
+    const discSwatches = $('discs').children;
 
     let state: CatState | null = parseState(location.search);
     let view: View = 'avatar';
     let current: { cat: PixelCat; discHex: string; label: string };
 
     const randomSeed = (): bigint => crypto.getRandomValues(new BigUint64Array(1))[0];
+    const setText = (id: string, text: string) => ($(id).textContent = text);
 
     function catSvg(cat: PixelCat, discHex: string, label: string, as: View, xmlns = false): string {
       const options = { xmlns, attrs: { role: 'img', 'aria-label': label } };
@@ -197,17 +308,45 @@ const jsonLd = [
     }
 
     function show(): void {
-      const { seed, discIndex } = resolveState(state);
-      const disc = DISC_COLORS[discIndex];
+      const { seed } = resolveState(state);
+      const steps = howItWorks(state);
+      const disc = steps.disc;
       const traits = traitsForSeed(seed);
       current = { cat: catForSeed(seed), discHex: disc.hex, label: traits.line };
       catBox.innerHTML = catSvg(current.cat, current.discHex, current.label, view);
       stage.dataset.view = view;
-      seedText.textContent = seed.toString();
-      traitsText.textContent = traits.line;
-      discText.textContent = disc.name;
-      swatch.style.setProperty('--swatch', disc.hex);
+      stage.style.setProperty('--disc', disc.hex);
+      setText('seed', steps.seed);
+      setText('traits', traits.line);
+      setText('disc', disc.name);
+      $('swatch').style.setProperty('--swatch', disc.hex);
       nameInput.placeholder = state?.kind === 'seed' ? 'Type a name' : DEFAULT_NAME;
+
+      setText('how-subject', steps.subject);
+      setText('step1-title', steps.step1Title);
+      setText('step1-value', steps.step1Value);
+      setText('step1-body', steps.step1Body);
+      setText('step2-seed', steps.seed);
+      setText('step2-hex', steps.seedHex);
+      setText('step2-body', steps.step2Body);
+      $('draws').replaceChildren(
+        ...steps.draws.map((draw) => {
+          const row = document.createElement('div');
+          row.append(
+            Object.assign(document.createElement('dt'), { textContent: draw.key }),
+            Object.assign(document.createElement('dd'), { textContent: draw.value }),
+          );
+          return row;
+        }),
+      );
+      for (const [i, swatch] of Array.from(discSwatches).entries()) {
+        swatch.toggleAttribute('data-chosen', i === steps.discIndex);
+      }
+      setText('step4-body', steps.step4Body);
+      const decorative = { attrs: { 'aria-hidden': 'true' } };
+      $('step-sprite').innerHTML = spriteSvg(current.cat, decorative);
+      $('step-avatar').innerHTML = avatarSvg(current.cat, disc.hex, decorative);
+
       history.replaceState(history.state, '', location.pathname + serializeState(state) + location.hash);
     }
 
@@ -240,32 +379,6 @@ const jsonLd = [
       );
     }
 
-    function addGalleryCats(count: number): void {
-      const seeds = crypto.getRandomValues(new BigUint64Array(count));
-      let i = 0;
-      moreButton.disabled = true;
-      const step = () => {
-        const start = performance.now();
-        const batch = document.createDocumentFragment();
-        do {
-          const seed = seeds[i++];
-          const traits = traitsForSeed(seed);
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'cat';
-          button.dataset.seed = seed.toString();
-          button.innerHTML = avatarSvg(catForSeed(seed), DISC_COLORS[discIndexForSeed(seed)].hex, {
-            attrs: { role: 'img', 'aria-label': traits.line },
-          });
-          batch.append(button);
-        } while (i < count && performance.now() - start < FRAME_BUDGET_MS);
-        gallery.append(batch);
-        if (i < count) requestAnimationFrame(step);
-        else moreButton.disabled = false;
-      };
-      requestAnimationFrame(step);
-    }
-
     nameInput.addEventListener('input', () => {
       state = parseState(serializeState({ kind: 'name', name: nameInput.value }));
       show();
@@ -284,10 +397,12 @@ const jsonLd = [
       });
     }
 
+    const downloadSize = () => Number(document.querySelector<HTMLInputElement>('input[name="size"]:checked')!.value);
+
     $('download-png').addEventListener('click', async () => {
       // Named before drawing: the cat or view can change while the PNG is made.
       const filename = `${fileStem(state)}-${view}.png`;
-      save(await pngBlob(current.cat, view === 'avatar' ? current.discHex : null, Number(sizeSelect.value)), filename);
+      save(await pngBlob(current.cat, view === 'avatar' ? current.discHex : null, downloadSize()), filename);
     });
 
     $('download-svg').addEventListener('click', () => {
@@ -307,22 +422,16 @@ const jsonLd = [
       statusTimer = setTimeout(() => (copyStatus.textContent = ''), 3000);
     });
 
-    gallery.addEventListener('click', (event) => {
-      const button = (event.target as Element).closest<HTMLButtonElement>('button[data-seed]');
-      if (!button) return;
-      state = { kind: 'seed', seed: BigInt(button.dataset.seed!) };
-      nameInput.value = '';
-      show();
-      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      $('generator').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-      nameInput.focus({ preventScroll: true });
-    });
-
-    moreButton.addEventListener('click', () => addGalleryCats(GALLERY_COUNT));
-
     if (state?.kind === 'name') nameInput.value = state.name;
     show();
-    $('gallery-section').hidden = false;
-    addGalleryCats(GALLERY_COUNT);
+    initCats({
+      onPick(seed) {
+        state = { kind: 'seed', seed };
+        nameInput.value = '';
+        show();
+        nameInput.focus({ preventScroll: true });
+      },
+      currentAvatarUrl: () => svgDataUrl(avatarSvg(current.cat, current.discHex, { xmlns: true })),
+    });
   </script>
 </Base>

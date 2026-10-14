@@ -26,7 +26,10 @@ const ogImage = new URL('/og.png', Astro.site);
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="sitemap" href="/sitemap-index.xml" />
-    <meta name="theme-color" content="#f3f6f3" media="(prefers-color-scheme: light)" />
+    <!-- The display face for the wordmark, the name and headings; OFL, see /fonts/OFL.txt. -->
+    <link rel="preload" href="/fonts/jersey-10.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- The page opens on the green hero band. -->
+    <meta name="theme-color" content="#0f3d2e" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0b1310" media="(prefers-color-scheme: dark)" />
 
     <meta property="og:type" content="website" />
@@ -48,15 +51,6 @@ const ogImage = new URL('/og.png', Astro.site);
     {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
   </head>
   <body>
-    <main>
-      <slot />
-    </main>
-    <footer class="site-footer">
-      <p>
-        The cats from <a href="https://twocats.sbarro.dev/">two cats, the iPhone app for splitting expenses</a>
-        · <a href="https://github.com/lsbarro/pixel-cat">Source on GitHub</a>
-        · <a href="https://github.com/lsbarro/pixel-cat/blob/main/LICENSE">MIT licence</a>
-      </p>
-    </footer>
+    <slot />
   </body>
 </html>
