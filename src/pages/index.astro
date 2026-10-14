@@ -1,0 +1,328 @@
+---
+import Base from '../layouts/Base.astro';
+import { avatarSvg, catForSeed, DISC_COLORS, traitsForSeed } from '../lib/pixel-cat/index.ts';
+import { resolveState } from '../lib/share-state.ts';
+
+// The default cat is drawn into the HTML, so the page shows a cat before (or without) its script.
+const { seed, discIndex } = resolveState(null);
+const traits = traitsForSeed(seed);
+const disc = DISC_COLORS[discIndex];
+const svg = avatarSvg(catForSeed(seed), disc.hex, { attrs: { role: 'img', 'aria-label': traits.line } });
+
+const title = 'pixel cat: turn any name into a pixel cat';
+const description =
+  'Type a name to meet its pixel cat, drawn by the same generator as two cats, the iPhone app for splitting expenses. Free PNG and SVG downloads.';
+const home = Astro.site!.href;
+const repo = 'https://github.com/lsbarro/pixel-cat';
+// The generator is a port of the app's, so the app is what this site and its code are based on.
+const twoCats = {
+  '@type': 'MobileApplication',
+  name: 'two cats',
+  url: 'https://twocats.sbarro.dev/',
+  operatingSystem: 'iOS',
+  applicationCategory: 'FinanceApplication',
+};
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'WebSite', '@id': `${home}#website`, name: 'pixel cat', url: home },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    '@id': `${home}#app`,
+    name: 'pixel cat',
+    url: home,
+    description,
+    image: new URL('/og.png', home).href,
+    applicationCategory: 'DesignApplication',
+    operatingSystem: 'Any',
+    browserRequirements: 'Requires JavaScript',
+    isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    author: { '@type': 'Person', name: 'Liam Sbarro' },
+    isBasedOn: twoCats,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareSourceCode',
+    '@id': `${home}#source`,
+    name: 'pixel-cat',
+    codeRepository: repo,
+    license: 'https://spdx.org/licenses/MIT.html',
+    programmingLanguage: 'TypeScript',
+    author: { '@type': 'Person', name: 'Liam Sbarro' },
+    targetProduct: { '@id': `${home}#app` },
+    isBasedOn: twoCats,
+  },
+];
+---
+
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <h1>pixel cat</h1>
+  <p class="lede">Type a name to meet its cat. The same name always gives the same cat.</p>
+
+  <section class="generator card" id="generator" aria-label="Cat generator">
+    <div class="stage" id="stage" data-view="avatar">
+      <div class="cat" id="cat"><Fragment set:html={svg} /></div>
+    </div>
+
+    <div class="controls">
+      <div>
+        <label class="field-label" for="name">Name</label>
+        <div class="row">
+          <input id="name" type="text" placeholder="pixel cat" autocomplete="off" autocapitalize="words" spellcheck="false" />
+          <button id="random" type="button" class="primary">Random</button>
+        </div>
+      </div>
+
+      <fieldset class="segmented">
+        <legend>Show</legend>
+        <div class="options">
+          <label><input type="radio" name="view" value="avatar" checked />On its disc</label>
+          <label><input type="radio" name="view" value="sprite" />Sprite</label>
+        </div>
+      </fieldset>
+
+      <dl class="facts">
+        <div><dt>Seed</dt><dd class="mono" id="seed">{seed.toString()}</dd></div>
+        <div><dt>Traits</dt><dd id="traits">{traits.line}</dd></div>
+        <div>
+          <dt>Disc</dt>
+          <dd><span class="swatch" id="swatch" style={`--swatch: ${disc.hex}`}></span><span id="disc">{disc.name}</span></dd>
+        </div>
+      </dl>
+
+      <div>
+        <label class="field-label" for="size">Download what is shown</label>
+        <div class="row">
+          <select id="size">
+            <option value="256">256 px</option>
+            <option value="512">512 px</option>
+            <option value="1024" selected>1024 px</option>
+          </select>
+          <button id="download-png" type="button">PNG</button>
+          <button id="download-svg" type="button">SVG</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="copy" type="button">Copy link</button>
+        <span class="status" id="copy-status" role="status"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="gallery" id="gallery-section" aria-labelledby="gallery-heading" hidden>
+    <h2 id="gallery-heading">More cats</h2>
+    <p>Random cats. Pick one to open it in the generator.</p>
+    <div class="gallery-grid" id="gallery"></div>
+    <button id="more" type="button">More cats</button>
+  </section>
+
+  <section class="prose" aria-labelledby="two-cats-heading">
+    <h2 id="two-cats-heading">The cats from two cats</h2>
+    <p>
+      In <a href="https://twocats.sbarro.dev/">two cats, an iPhone app for splitting expenses</a>, every person
+      you split with gets a pixel cat generated from their name. This page runs the same generator, so a name
+      gives the same cat here as it does in the app. Try your friends' names, then meet their cats in
+      <a href="https://twocats.sbarro.dev/">two cats</a>.
+    </p>
+  </section>
+
+  <section class="prose" aria-labelledby="how-heading">
+    <h2 id="how-heading">How it works</h2>
+    <p>
+      The name is trimmed of spaces at either end, and its UTF-8 bytes are hashed with FNV-1a 64 into a 64-bit
+      seed. Case counts: Milo and milo are different cats. The seed starts a SplitMix64 random stream, and every
+      choice the cat makes is the next draw from it, in a fixed order, so a name always gives the same cat.
+    </p>
+    <p>
+      The first draw picks one of three styles. A flat cat's head grows from one of five mirrored templates, named
+      for their ears: pointy, round, classic, lynx or fold. A tilted cat is a flat head scaled up and turned
+      between 8 and 14 degrees. A sculpted cat is a small 3D head, turned and lit, then sampled onto a 14 × 14
+      pixel grid.
+    </p>
+    <p>
+      Flat and tilted cats then draw a coat: plain, calico, tabby, Siamese, dark or tuxedo. Calico and tuxedo
+      patches and tabby markings grow with cellular automata, Siamese cats get toned ears and muzzle, and a dark
+      cat is toned all over. Sculpted cats are plain, calico or Siamese. Eyes come in seven kinds: dot, tall,
+      wide, sleepy, slant, happy and wink.
+    </p>
+    <p>
+      A cat is a white sprite with see-through pixels. Holes show the disc behind it, and the in-between tones
+      pick up its colour. The disc is one of six colours (forest, sage, slate, plum, terracotta or amber), taken
+      from a second hash of the name. A random cat has no name, so its seed picks the disc.
+    </p>
+  </section>
+
+  <script>
+    import {
+      avatarSvg,
+      catForSeed,
+      DISC_COLORS,
+      discIndexForSeed,
+      spriteSvg,
+      traitsForSeed,
+      type PixelCat,
+    } from '../lib/pixel-cat/index.ts';
+    import { avatarLayout, spriteLayout, spriteRgba } from '../lib/raster.ts';
+    import { DEFAULT_NAME, fileStem, parseState, resolveState, serializeState, type CatState } from '../lib/share-state.ts';
+
+    type View = 'avatar' | 'sprite';
+
+    const GALLERY_COUNT = 24;
+    /** Gallery cats are generated in batches of about this many ms per frame, so a slow phone keeps scrolling. */
+    const FRAME_BUDGET_MS = 8;
+
+    const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const nameInput = $<HTMLInputElement>('name');
+    const stage = $('stage');
+    const catBox = $('cat');
+    const seedText = $('seed');
+    const traitsText = $('traits');
+    const discText = $('disc');
+    const swatch = $('swatch');
+    const sizeSelect = $<HTMLSelectElement>('size');
+    const copyStatus = $('copy-status');
+    const gallery = $('gallery');
+    const moreButton = $<HTMLButtonElement>('more');
+
+    let state: CatState | null = parseState(location.search);
+    let view: View = 'avatar';
+    let current: { cat: PixelCat; discHex: string; label: string };
+
+    const randomSeed = (): bigint => crypto.getRandomValues(new BigUint64Array(1))[0];
+
+    function catSvg(cat: PixelCat, discHex: string, label: string, as: View, xmlns = false): string {
+      const options = { xmlns, attrs: { role: 'img', 'aria-label': label } };
+      return as === 'avatar' ? avatarSvg(cat, discHex, options) : spriteSvg(cat, options);
+    }
+
+    function show(): void {
+      const { seed, discIndex } = resolveState(state);
+      const disc = DISC_COLORS[discIndex];
+      const traits = traitsForSeed(seed);
+      current = { cat: catForSeed(seed), discHex: disc.hex, label: traits.line };
+      catBox.innerHTML = catSvg(current.cat, current.discHex, current.label, view);
+      stage.dataset.view = view;
+      seedText.textContent = seed.toString();
+      traitsText.textContent = traits.line;
+      discText.textContent = disc.name;
+      swatch.style.setProperty('--swatch', disc.hex);
+      nameInput.placeholder = state?.kind === 'seed' ? 'Type a name' : DEFAULT_NAME;
+      history.replaceState(history.state, '', location.pathname + serializeState(state) + location.hash);
+    }
+
+    function save(blob: Blob, filename: string): void {
+      const url = URL.createObjectURL(blob);
+      const link = Object.assign(document.createElement('a'), { href: url, download: filename });
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    /** The cat as a `size`-px PNG at a whole-number scale with no smoothing, so its pixels stay square. */
+    async function pngBlob(cat: PixelCat, discHex: string | null, size: number): Promise<Blob> {
+      const canvas = Object.assign(document.createElement('canvas'), { width: size, height: size });
+      const context = canvas.getContext('2d')!;
+      context.imageSmoothingEnabled = false;
+      const layout = discHex === null ? spriteLayout(cat, size) : avatarLayout(cat, size);
+      const pixels = new ImageData(spriteRgba(cat, layout.scale), layout.width, layout.height);
+      if (discHex === null) {
+        context.putImageData(pixels, layout.left, layout.top);
+      } else {
+        context.fillStyle = discHex;
+        context.beginPath();
+        context.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
+        context.fill();
+        // putImageData would replace the disc under the cat's holes; drawing at 1:1 composites over it.
+        context.drawImage(await createImageBitmap(pixels), layout.left, layout.top);
+      }
+      return new Promise((resolve, reject) =>
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('The PNG could not be made'))), 'image/png'),
+      );
+    }
+
+    function addGalleryCats(count: number): void {
+      const seeds = crypto.getRandomValues(new BigUint64Array(count));
+      let i = 0;
+      moreButton.disabled = true;
+      const step = () => {
+        const start = performance.now();
+        const batch = document.createDocumentFragment();
+        do {
+          const seed = seeds[i++];
+          const traits = traitsForSeed(seed);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'cat';
+          button.dataset.seed = seed.toString();
+          button.innerHTML = avatarSvg(catForSeed(seed), DISC_COLORS[discIndexForSeed(seed)].hex, {
+            attrs: { role: 'img', 'aria-label': traits.line },
+          });
+          batch.append(button);
+        } while (i < count && performance.now() - start < FRAME_BUDGET_MS);
+        gallery.append(batch);
+        if (i < count) requestAnimationFrame(step);
+        else moreButton.disabled = false;
+      };
+      requestAnimationFrame(step);
+    }
+
+    nameInput.addEventListener('input', () => {
+      state = parseState(serializeState({ kind: 'name', name: nameInput.value }));
+      show();
+    });
+
+    $('random').addEventListener('click', () => {
+      state = { kind: 'seed', seed: randomSeed() };
+      nameInput.value = '';
+      show();
+    });
+
+    for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="view"]')) {
+      radio.addEventListener('change', () => {
+        view = radio.value as View;
+        show();
+      });
+    }
+
+    $('download-png').addEventListener('click', async () => {
+      // Named before drawing: the cat or view can change while the PNG is made.
+      const filename = `${fileStem(state)}-${view}.png`;
+      save(await pngBlob(current.cat, view === 'avatar' ? current.discHex : null, Number(sizeSelect.value)), filename);
+    });
+
+    $('download-svg').addEventListener('click', () => {
+      const svg = catSvg(current.cat, current.discHex, current.label, view, true);
+      save(new Blob([svg], { type: 'image/svg+xml' }), `${fileStem(state)}-${view}.svg`);
+    });
+
+    let statusTimer: ReturnType<typeof setTimeout> | undefined;
+    $('copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(location.href);
+        copyStatus.textContent = 'Link copied';
+      } catch {
+        copyStatus.textContent = 'Copy the link from the address bar';
+      }
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => (copyStatus.textContent = ''), 3000);
+    });
+
+    gallery.addEventListener('click', (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('button[data-seed]');
+      if (!button) return;
+      state = { kind: 'seed', seed: BigInt(button.dataset.seed!) };
+      nameInput.value = '';
+      show();
+      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      $('generator').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+      nameInput.focus({ preventScroll: true });
+    });
+
+    moreButton.addEventListener('click', () => addGalleryCats(GALLERY_COUNT));
+
+    if (state?.kind === 'name') nameInput.value = state.name;
+    show();
+    $('gallery-section').hidden = false;
+    addGalleryCats(GALLERY_COUNT);
+  </script>
+</Base>

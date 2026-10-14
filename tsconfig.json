@@ -1,0 +1,10 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    // The cat generator runs under Node's type stripping (`npm test`) as well as Vite, so .ts files
+    // under src/lib stay in the erasable subset: no enums, namespaces or parameter properties.
+    "erasableSyntaxOnly": true
+  },
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}

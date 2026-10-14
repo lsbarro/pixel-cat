@@ -1,0 +1,22 @@
+# Render Blueprint for https://pixelcat.sbarro.dev. A static site: the generator runs in the browser.
+services:
+  - type: web
+    runtime: static
+    name: pixelcat
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.2
+    domains:
+      - pixelcat.sbarro.dev
+    headers:
+      # Astro fingerprints everything under /_astro/, so it can be cached forever.
+      - path: /_astro/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      # Clients that guess the conventional path. dist/ has no sitemap.xml, so this fires.
+      - type: redirect
+        source: /sitemap.xml
+        destination: /sitemap-index.xml

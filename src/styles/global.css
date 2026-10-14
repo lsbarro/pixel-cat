@@ -1,0 +1,335 @@
+:root {
+  color-scheme: light dark;
+  --color-canvas: #f3f6f3;
+  --color-card: #ffffff;
+  --color-text: #1c1c1e;
+  --color-muted: #5e6360;
+  --color-hair: rgba(15, 61, 46, 0.14);
+  --color-brand: #0f3d2e;
+  --color-brand-text: #ffffff;
+  --color-accent-text: #1a5240;
+  --color-soft: #dce8df;
+  --color-focus: #4a6fa5;
+  /* The sprite is white on transparent, so it is shown on a dark stage, as it would be used. */
+  --color-stage-dark: #0f3d2e;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  --radius: 16px;
+  --gutter: clamp(16px, 5vw, 40px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-canvas: #0b1310;
+    --color-card: #1c1c1e;
+    --color-text: #f2f2f7;
+    --color-muted: #a3a8a5;
+    --color-hair: rgba(255, 255, 255, 0.14);
+    --color-brand: #7ec8a6;
+    --color-brand-text: #0b1310;
+    --color-accent-text: #7ec8a6;
+    --color-soft: #1a2e26;
+    --color-focus: #9cc2ff;
+    --color-stage-dark: #000000;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: clamp(24px, 6vw, 64px) var(--gutter) 64px;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: clamp(2.25rem, 7vw, 3.5rem);
+}
+
+h2 {
+  font-size: 1.5rem;
+}
+
+.lede {
+  margin: 8px 0 32px;
+  color: var(--color-muted);
+  font-size: 1.125rem;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  padding: 8px 16px;
+  border: 1px solid var(--color-hair);
+  border-radius: 999px;
+  background: var(--color-card);
+  font-weight: 600;
+}
+
+button:hover {
+  background: var(--color-soft);
+}
+
+button.primary {
+  border-color: transparent;
+  background: var(--color-brand);
+  color: var(--color-brand-text);
+}
+
+button.primary:hover {
+  filter: brightness(1.1);
+}
+
+button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+input[type='text'],
+select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-hair);
+  border-radius: 10px;
+  background: var(--color-canvas);
+}
+
+/* SVG cats: `shape-rendering: crispEdges` is set on each, this keeps a scaled one from blurring. */
+.cat svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+.card {
+  border: 1px solid var(--color-hair);
+  border-radius: var(--radius);
+  background: var(--color-card);
+}
+
+.generator {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  padding: clamp(16px, 4vw, 32px);
+}
+
+@media (min-width: 720px) {
+  .generator {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    align-items: start;
+  }
+}
+
+.stage {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding: 10%;
+  border-radius: 12px;
+  background: var(--color-canvas);
+}
+
+.stage[data-view='sprite'] {
+  background: var(--color-stage-dark);
+}
+
+.stage .cat {
+  width: 100%;
+}
+
+.controls {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.field-label,
+.controls legend {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.row input[type='text'] {
+  flex: 1 1 8em;
+  min-width: 0;
+}
+
+.segmented {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.segmented .options {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--color-canvas);
+}
+
+.segmented label {
+  position: relative;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.9375rem;
+}
+
+/* The radio stays in the accessibility tree and takes focus; its label draws the state. */
+.segmented input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.segmented label:has(input:checked) {
+  background: var(--color-card);
+  box-shadow: 0 0 0 1px var(--color-hair);
+  font-weight: 600;
+}
+
+.segmented label:has(input:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.facts div {
+  display: grid;
+  grid-template-columns: 4.5em minmax(0, 1fr);
+  gap: 12px;
+}
+
+.facts dt {
+  color: var(--color-muted);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--swatch);
+  vertical-align: -0.1em;
+  box-shadow: 0 0 0 1px var(--color-hair);
+}
+
+.status {
+  color: var(--color-accent-text);
+  font-size: 0.9375rem;
+}
+
+.gallery {
+  margin-top: 48px;
+}
+
+.gallery p {
+  margin: 4px 0 20px;
+  color: var(--color-muted);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.gallery-grid button {
+  padding: 8px;
+  border-radius: var(--radius);
+  aspect-ratio: 1;
+}
+
+.gallery-grid button[aria-current='true'] {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 1px var(--color-brand);
+}
+
+a {
+  color: var(--color-accent-text);
+  text-underline-offset: 0.15em;
+}
+
+.prose {
+  max-width: 68ch;
+  margin-top: 48px;
+}
+
+.prose p {
+  margin: 8px 0 0;
+}
+
+.site-footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px var(--gutter) 48px;
+  border-top: 1px solid var(--color-hair);
+  color: var(--color-muted);
+  font-size: 0.9375rem;
+}
+
+.site-footer p {
+  margin: 0;
+}

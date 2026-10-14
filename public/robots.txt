@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://pixelcat.sbarro.dev/sitemap-index.xml
