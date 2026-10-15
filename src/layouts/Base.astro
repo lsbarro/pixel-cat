@@ -49,6 +49,20 @@ const ogImage = new URL('/og.png', Astro.site);
     <meta name="twitter:image" content={ogImage} />
 
     {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
+    <!--
+      A random cat in the tab on every load. The /favicon.svg link above stays for crawlers, no-JS readers and the
+      first paint; the script replaces that element rather than changing its href, which some browsers ignore.
+    -->
+    <script>
+      import { faviconUrl } from '../lib/favicon.ts';
+
+      const icon = document.createElement('link');
+      icon.rel = 'icon';
+      icon.type = 'image/svg+xml';
+      icon.href = faviconUrl(crypto.getRandomValues(new BigUint64Array(1))[0]);
+      document.querySelectorAll('link[rel~="icon"]').forEach((link) => link.remove());
+      document.head.append(icon);
+    </script>
   </head>
   <body>
     <slot />

@@ -61,6 +61,11 @@
   box-sizing: border-box;
 }
 
+/* No rubber band: the page stops dead at its ends, the seam with the wall included. Read from html, not body. */
+html {
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
   background: var(--color-canvas);
@@ -70,7 +75,6 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
-  overscroll-behavior-y: none;
 }
 
 a {
@@ -736,11 +740,12 @@ input {
   visibility: visible;
 }
 
+/* Like the page, the wall stops dead at the seam: no rubber band, and no handing a gesture on to the page. */
 .wall-scroll {
   position: absolute;
   inset: 0;
   overflow-y: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   scrollbar-width: none;
 }
 

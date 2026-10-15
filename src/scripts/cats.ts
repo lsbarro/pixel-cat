@@ -4,14 +4,10 @@
 import { avatarSvg, catForSeed } from '../lib/pixel-cat/index.ts';
 import { catTile, mix, svgDataUrl, type CatTile } from '../lib/page.ts';
 
-/** Within this many px of the seam between the page and the wall, scrolling eases, to 70% at the seam. */
-const SLOW_ZONE = 250;
-/** Scroll speed at the seam itself, as a share of full speed. */
-const SLOW_FLOOR = 0.7;
 /** The wall's chrome and dock appear once it is scrolled this many px past the seam. */
 const CHROME_DEPTH = 600;
-/** Once the wheel opens the wall, the rest of that gesture is swallowed until the wheel is quiet this many ms. */
-const REST_GAP_MS = 180;
+/** A scroll this many ms after a wheel event is the wheel's doing. */
+const WHEEL_SCROLL_MS = 250;
 const GALLERY_ROWS = 5;
 /** Cats waiting in the wall below the gallery's, and how many rows it adds when its end comes near. */
 const WALL_EXTRA = 160;
@@ -101,8 +97,6 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
   let extra = randomSeeds(WALL_EXTRA);
   let wallDrawn = 0;
   let drawing = false;
-  /** The wall's scrollTop at which it lines up exactly with the page scrolled to its end. */
-  let seam = 0;
 
   function wallTile(seed: bigint, index: number): HTMLElement {
     const tile = tileFor(seed);
@@ -171,15 +165,16 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
   function enterWall(leftover: number): void {
     const rect = alignWall();
     mode = 'wall';
-    // A gallery taller than the viewport starts above it; the wall then starts scrolled by that much.
+    // The seam is the wall's top. A gallery taller than the viewport starts above it, and so does the wall's
+    // grid, out of the wall's reach: its rows up there are the page's to show.
     wallSpacer.style.height = `${Math.max(0, rect.top)}px`;
-    seam = Math.max(0, -rect.top);
+    wallGrid.style.marginTop = `${Math.min(0, rect.top)}px`;
     // The page shows through the wall beside its grid; the scroll handler's fade restores it on the way out.
     document.body.style.backgroundColor = WALL_COLOR;
     resetDock();
     setChrome(false);
     setOpen(true);
-    wallScroll.scrollTop = seam + Math.max(0, leftover);
+    wallScroll.scrollTop = Math.max(0, leftover);
   }
 
   /** Closes the wall onto the page's end, `leftover` px (≤ 0) back up from it, or onto the top of the page. */
@@ -208,53 +203,47 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
 
   // MARK: Scrolling across the seam
 
-  /** Scroll speed near the seam: full speed `SLOW_ZONE` px away, 70% at the seam, on a smoothstep curve. */
-  const damp = (distance: number) => {
-    const t = clamp01(distance / SLOW_ZONE);
-    return SLOW_FLOOR + (1 - SLOW_FLOOR) * t * t * (3 - 2 * t);
-  };
+  /** How far the page is from its end, in px. */
+  const pageLeft = () => scroller.scrollHeight - scroller.scrollTop - innerHeight;
 
-  // The browser keeps a wheel gesture on the scroller it began on, so leaving the wall comes to rest at the
-  // seam on its own. Entering, the wall opens exactly at the seam and swallows the rest of the gesture to
-  // rest there too; the next gesture scrolls on into the wall. A reversal ends the rest at once.
-  let resting = false;
-  let restTimer = 0;
-  function rest(): void {
-    resting = true;
-    clearTimeout(restTimer);
-    restTimer = window.setTimeout(() => (resting = false), REST_GAP_MS);
+  // The browser keeps a wheel gesture, momentum and all, on the scroller it picked for the gesture's first
+  // event, and neither the page nor the wall can scroll or stretch past the seam (`overscroll-behavior:
+  // none`). So a gesture that reaches the seam stops dead there, and the wall swaps in or out underneath it:
+  // the next gesture starts on the other side and scrolls it natively. A gesture that starts at the seam
+  // headed the other way swaps on its first event, the only one the browser lets the page cancel; held back
+  // until the swap is on screen, the gesture then starts on the right side too.
+  let wheelAt = -Infinity;
+  let wheelDown = false;
+  let holds = 0;
+
+  /** Cancels what wheel events the page may cancel until the frame after this one. */
+  function hold(): void {
+    holds++;
+    requestAnimationFrame(() => requestAnimationFrame(() => holds--));
+  }
+
+  /** Swaps the wall in or out if the wheel heads across the seam from where it is. */
+  function swapAtSeam(): void {
+    if (mode === 'page' && wheelDown && pageLeft() < 1) {
+      enterWall(0);
+      hold();
+    } else if (mode === 'wall' && !wheelDown && wallScroll.scrollTop < 1) {
+      exitWall(0, false);
+      hold();
+    }
   }
 
   function onWheel(event: WheelEvent): void {
-    if (event.ctrlKey) return;
-    const dy = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaMode === 2 ? event.deltaY * innerHeight : event.deltaY;
-    if (!dy) return;
-    if (resting && mode === 'wall' && dy > 0) {
-      event.preventDefault();
-      rest();
-      return;
-    }
-    resting = false;
-    if (mode === 'page') {
-      const remaining = scroller.scrollHeight - scroller.scrollTop - innerHeight;
-      if (dy < 0 || remaining > SLOW_ZONE) return;
-      event.preventDefault();
-      const step = dy * damp(remaining);
-      if (step >= remaining - 0.5) {
-        scroller.scrollTop = scroller.scrollHeight;
-        enterWall(0);
-        rest();
-      } else {
-        scroller.scrollTop += step;
-      }
-    } else {
-      const distance = wallScroll.scrollTop - seam;
-      if (distance > SLOW_ZONE) return;
-      event.preventDefault();
-      const step = dy * damp(distance);
-      if (distance + step < 0) exitWall(distance + step, false);
-      else wallScroll.scrollTop += step;
-    }
+    if (event.ctrlKey || !event.deltaY) return;
+    wheelAt = performance.now();
+    wheelDown = event.deltaY > 0;
+    swapAtSeam();
+    if (holds && event.cancelable) event.preventDefault();
+  }
+
+  /** A wheel's scroll reaching the seam swaps too, should no wheel event follow it there. */
+  function onScrollToSeam(): void {
+    if (performance.now() - wheelAt < WHEEL_SCROLL_MS) swapAtSeam();
   }
 
   let touchY = 0;
@@ -263,12 +252,11 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
     const dy = touchY - y;
     touchY = y;
     if (mode === 'page') {
-      const remaining = scroller.scrollHeight - scroller.scrollTop - innerHeight;
-      if (dy > 0 && remaining <= 1) {
+      if (dy > 0 && pageLeft() <= 1) {
         event.preventDefault();
         enterWall(dy);
       }
-    } else if (dy < 0 && wallScroll.scrollTop <= seam) {
+    } else if (dy < 0 && wallScroll.scrollTop <= 0) {
       event.preventDefault();
       exitWall(dy, false);
     }
@@ -338,7 +326,7 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
   wallScroll.addEventListener(
     'scroll',
     () => {
-      setChrome(wallScroll.scrollTop - seam > CHROME_DEPTH);
+      setChrome(wallScroll.scrollTop > CHROME_DEPTH);
       const nearEnd = wallScroll.scrollTop + wallScroll.clientHeight > wallScroll.scrollHeight - APPEND_MARGIN;
       if (nearEnd && !drawing) {
         const more = randomSeeds(cols * APPEND_ROWS);
@@ -349,6 +337,7 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
     },
     { passive: true },
   );
+  wallScroll.addEventListener('scroll', onScrollToSeam, { passive: true });
 
   $('wall-back').addEventListener('click', backToPage);
   document.addEventListener('keydown', (event) => {
@@ -360,6 +349,7 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
   addEventListener('touchmove', onTouchMove, { passive: false });
   addEventListener('resize', () => mode === 'wall' && alignWall());
   addEventListener('scroll', queueFade, { passive: true });
+  addEventListener('scroll', onScrollToSeam, { passive: true });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     readCanvas();
     fade();
