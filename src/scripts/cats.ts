@@ -10,6 +10,8 @@ const SLOW_ZONE = 250;
 const SLOW_FLOOR = 0.7;
 /** The wall's chrome and dock appear once it is scrolled this many px past the seam. */
 const CHROME_DEPTH = 600;
+/** Once the wheel opens the wall, the rest of that gesture is swallowed until the wheel is quiet this many ms. */
+const REST_GAP_MS = 180;
 const GALLERY_ROWS = 5;
 /** Cats waiting in the wall below the gallery's, and how many rows it adds when its end comes near. */
 const WALL_EXTRA = 160;
@@ -212,10 +214,27 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
     return SLOW_FLOOR + (1 - SLOW_FLOOR) * t * t * (3 - 2 * t);
   };
 
+  // The browser keeps a wheel gesture on the scroller it began on, so leaving the wall comes to rest at the
+  // seam on its own. Entering, the wall opens exactly at the seam and swallows the rest of the gesture to
+  // rest there too; the next gesture scrolls on into the wall. A reversal ends the rest at once.
+  let resting = false;
+  let restTimer = 0;
+  function rest(): void {
+    resting = true;
+    clearTimeout(restTimer);
+    restTimer = window.setTimeout(() => (resting = false), REST_GAP_MS);
+  }
+
   function onWheel(event: WheelEvent): void {
     if (event.ctrlKey) return;
     const dy = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaMode === 2 ? event.deltaY * innerHeight : event.deltaY;
     if (!dy) return;
+    if (resting && mode === 'wall' && dy > 0) {
+      event.preventDefault();
+      rest();
+      return;
+    }
+    resting = false;
     if (mode === 'page') {
       const remaining = scroller.scrollHeight - scroller.scrollTop - innerHeight;
       if (dy < 0 || remaining > SLOW_ZONE) return;
@@ -223,7 +242,8 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
       const step = dy * damp(remaining);
       if (step >= remaining - 0.5) {
         scroller.scrollTop = scroller.scrollHeight;
-        enterWall(step - Math.max(0, remaining));
+        enterWall(0);
+        rest();
       } else {
         scroller.scrollTop += step;
       }
