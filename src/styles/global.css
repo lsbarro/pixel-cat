@@ -589,49 +589,6 @@ input {
   width: 56px;
 }
 
-.long-version {
-  max-width: 68ch;
-  margin-top: 28px;
-  border-block: 1px solid var(--color-hair);
-}
-
-.long-version summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 56px;
-  font-weight: 600;
-  list-style: none;
-  cursor: pointer;
-}
-
-.long-version summary::-webkit-details-marker {
-  display: none;
-}
-
-.long-version .toggle {
-  font-family: var(--font-display);
-  font-size: 24px;
-  color: var(--color-step);
-  transition: transform 0.2s ease;
-}
-
-.long-version[open] .toggle {
-  transform: rotate(45deg);
-}
-
-.long-version-body {
-  padding-bottom: 20px;
-}
-
-.long-version-body p {
-  margin: 0 0 12px;
-}
-
-.long-version-body p:last-child {
-  margin: 0;
-}
-
 /* two cats */
 
 .two-cats {

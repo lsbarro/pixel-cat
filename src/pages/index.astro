@@ -183,34 +183,6 @@ const jsonLd = [
           <p>A white sprite with see-through pixels. Holes show the disc behind it.</p>
         </li>
       </ol>
-
-      <details class="long-version">
-        <summary>The long version<span class="toggle" aria-hidden="true">+</span></summary>
-        <div class="long-version-body">
-          <p>
-            The name is trimmed of spaces at either end, and its UTF-8 bytes are hashed with FNV-1a 64 into a 64-bit
-            seed. Case counts: Milo and milo are different cats. The seed starts a SplitMix64 random stream, and every
-            choice the cat makes is the next draw from it, in a fixed order, so a name always gives the same cat.
-          </p>
-          <p>
-            The first draw picks one of three styles. A flat cat's head grows from one of five mirrored templates,
-            named for their ears: pointy, round, classic, lynx or fold. A tilted cat is a flat head scaled up and
-            turned between 8 and 14 degrees. A sculpted cat is a small 3D head, turned and lit, then sampled onto a
-            14 × 14 pixel grid.
-          </p>
-          <p>
-            Flat and tilted cats then draw a coat: plain, calico, tabby, Siamese, dark or tuxedo. Calico and tuxedo
-            patches and tabby markings grow with cellular automata, Siamese cats get toned ears and muzzle, and a dark
-            cat is toned all over. Sculpted cats are plain, calico or Siamese. Eyes come in seven kinds: dot, tall,
-            wide, sleepy, slant, happy and wink.
-          </p>
-          <p>
-            A cat is a white sprite with see-through pixels. Holes show the disc behind it, and the in-between tones
-            pick up its colour. The disc is one of six colours (forest, sage, slate, plum, terracotta or amber), taken
-            from a second hash of the name. A random cat has no name, so its seed picks the disc.
-          </p>
-        </div>
-      </details>
     </section>
 
     <section class="two-cats" aria-labelledby="two-cats-title">

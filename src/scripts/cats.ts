@@ -4,8 +4,12 @@
 import { avatarSvg, catForSeed } from '../lib/pixel-cat/index.ts';
 import { catTile, mix, svgDataUrl, type CatTile } from '../lib/page.ts';
 
-/** Within this many px of the seam between the page and the wall, scrolling slows, to 30% at the seam. */
-const SLOW_ZONE = 600;
+/** Within this many px of the seam between the page and the wall, scrolling eases, to 70% at the seam. */
+const SLOW_ZONE = 250;
+/** Scroll speed at the seam itself, as a share of full speed. */
+const SLOW_FLOOR = 0.7;
+/** The wall's chrome and dock appear once it is scrolled this many px past the seam. */
+const CHROME_DEPTH = 600;
 const GALLERY_ROWS = 5;
 /** Cats waiting in the wall below the gallery's, and how many rows it adds when its end comes near. */
 const WALL_EXTRA = 160;
@@ -202,8 +206,11 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
 
   // MARK: Scrolling across the seam
 
-  /** Scroll speed near the seam: full speed `SLOW_ZONE` px away, 30% at the seam. */
-  const damp = (distance: number) => 0.3 + 0.7 * clamp01(distance / SLOW_ZONE);
+  /** Scroll speed near the seam: full speed `SLOW_ZONE` px away, 70% at the seam, on a smoothstep curve. */
+  const damp = (distance: number) => {
+    const t = clamp01(distance / SLOW_ZONE);
+    return SLOW_FLOOR + (1 - SLOW_FLOOR) * t * t * (3 - 2 * t);
+  };
 
   function onWheel(event: WheelEvent): void {
     if (event.ctrlKey) return;
@@ -311,7 +318,7 @@ export function initCats({ onPick, currentAvatarUrl }: CatsOptions): void {
   wallScroll.addEventListener(
     'scroll',
     () => {
-      setChrome(wallScroll.scrollTop - seam > SLOW_ZONE);
+      setChrome(wallScroll.scrollTop - seam > CHROME_DEPTH);
       const nearEnd = wallScroll.scrollTop + wallScroll.clientHeight > wallScroll.scrollHeight - APPEND_MARGIN;
       if (nearEnd && !drawing) {
         const more = randomSeeds(cols * APPEND_ROWS);
