@@ -731,9 +731,22 @@ input {
   visibility: hidden;
 }
 
+/* Painted over the pinned copy of the heading's links as the wall scrolls up. */
 .wall .tile-grid,
 .wall-end {
+  position: relative;
   background: var(--green-deep);
+}
+
+/* The heading's links, copied over the originals so they can be clicked and focused while the wall is open. */
+.wall-head {
+  position: sticky;
+  top: 0;
+  height: 0;
+}
+
+.wall-links {
+  position: absolute;
 }
 
 .wall.is-open {
@@ -747,10 +760,17 @@ input {
   overflow-y: auto;
   overscroll-behavior: none;
   scrollbar-width: none;
+  /* Rows come and go above the viewport with padding of their exact height; nothing may nudge `scrollTop`. */
+  overflow-anchor: none;
 }
 
 .wall-scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* It takes focus only from a tile scrolled out of the grid, to keep the keyboard scrolling it. */
+.wall-scroll:focus {
+  outline: none;
 }
 
 .wall-end {

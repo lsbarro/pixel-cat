@@ -1,7 +1,15 @@
 // The home page's "how it works" steps and gallery tiles. Run with `npm test`.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { catForSeed, DISC_COLORS, discIndexForName, seedForName, spriteSvg, traitsForSeed } from './pixel-cat/index.ts';
+import {
+  catForSeed,
+  DISC_COLORS,
+  discIndexForName,
+  discIndexForSeed,
+  seedForName,
+  spriteSvg,
+  traitsForSeed,
+} from './pixel-cat/index.ts';
 import { catTile, howItWorks, mix, svgDataUrl } from './page.ts';
 import { DEFAULT_NAME } from './share-state.ts';
 
@@ -61,6 +69,17 @@ test('a tile has its disc colour and traits line', () => {
   assert.equal(tile.discHex, DISC_COLORS[1].hex);
   assert.equal(tile.label, traitsForSeed(7n).line);
   assert.ok(tile.spriteUrl.startsWith('data:image/svg+xml,'));
+});
+
+test('a tile is the same as building it from the separate cat and traits', () => {
+  for (const seed of [0n, 7n, 42n, 2n ** 64n - 1n]) {
+    assert.deepEqual(catTile(seed), {
+      seed,
+      discHex: DISC_COLORS[discIndexForSeed(seed)].hex,
+      label: traitsForSeed(seed).line,
+      spriteUrl: svgDataUrl(spriteSvg(catForSeed(seed), { xmlns: true })),
+    });
+  }
 });
 
 test('mix goes from the base colour to the colour', () => {

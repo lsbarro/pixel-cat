@@ -1,7 +1,7 @@
 // What the home page shows about a cat, as data: the "how it works" steps and the gallery tiles. Pure, so the
 // page draws the same text at build time (for crawlers and no-JS readers) as its script does in the browser.
+import { catAndTraitsForSeed } from './pixel-cat/generator.ts';
 import {
-  catForSeed,
   DISC_COLORS,
   discIndexForSeed,
   spriteSvg,
@@ -110,11 +110,12 @@ export interface CatTile {
 }
 
 export function catTile(seed: bigint): CatTile {
+  const { cat, traits } = catAndTraitsForSeed(seed);
   return {
     seed,
     discHex: DISC_COLORS[discIndexForSeed(seed)].hex,
-    label: traitsForSeed(seed).line,
-    spriteUrl: svgDataUrl(spriteSvg(catForSeed(seed), { xmlns: true })),
+    label: traits.line,
+    spriteUrl: svgDataUrl(spriteSvg(cat, { xmlns: true })),
   };
 }
 

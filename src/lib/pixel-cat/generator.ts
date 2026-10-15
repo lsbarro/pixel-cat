@@ -914,3 +914,8 @@ export function catForName(name: string): PixelCat {
 export function traitsForSeed(seed: bigint): PixelCatTraits {
   return generate(seed).traits;
 }
+
+/** `catForSeed` and `traitsForSeed` from one generation, for a caller that needs both. */
+export function catAndTraitsForSeed(seed: bigint): { cat: PixelCat; traits: PixelCatTraits } {
+  return generate(seed);
+}
